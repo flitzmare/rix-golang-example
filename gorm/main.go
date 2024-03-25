@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -122,6 +123,30 @@ func main() {
 		}
 
 		return c.JSON(http.StatusNoContent, nil)
+	})
+
+	e.POST("/register", func(c echo.Context) error {
+		var req = requests.RegisterRequest{}
+		err := c.Bind(&req)
+		if err != nil {
+			return err
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+
+		result := db.Create(&entities.User{
+			Name:     req.Name,
+			Email:    req.Email,
+			Password: string(hashedPassword),
+		})
+		if result.Error != nil {
+			return result.Error
+		}
+
+		return c.String(http.StatusCreated, "User created")
 	})
 
 	e.Logger.Fatal(e.Start(":8080"))
